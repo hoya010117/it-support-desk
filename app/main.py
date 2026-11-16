@@ -1,3 +1,4 @@
+from .csv_import import router as csv_import_router
 from pathlib import Path
 from fastapi.responses import FileResponse
 from .csv_export import router as csv_router
@@ -10,7 +11,7 @@ from .database import connect_db, initialize_database
 
 
 app = FastAPI(title="IT 요청·장애 관리 도구")
-app.include_router(csv_router)
+app.include_router(csv_import_router)
 app.include_router(csv_router)
 
 initialize_database()
