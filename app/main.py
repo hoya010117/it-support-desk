@@ -36,13 +36,38 @@ def home():
 
 
 @app.get("/requests")
-def get_requests():
+def get_requests(
+    status: str | None = None,
+    category: str | None = None,
+    q: str | None = None,
+):
     connection = connect_db()
 
     try:
-        rows = connection.execute(
-            "SELECT * FROM requests ORDER BY id DESC"
-        ).fetchall()
+        conditions = []
+        parameters = []
+
+        if status:
+            conditions.append("status = ?")
+            parameters.append(status)
+
+        if category:
+            conditions.append("category = ?")
+            parameters.append(category)
+
+        if q and q.strip():
+            keyword = f"%{q.strip()}%"
+            conditions.append(
+                "(title LIKE ? OR category LIKE ? OR description LIKE ?)"
+            )
+            parameters.extend([keyword, keyword, keyword])
+
+        query = "SELECT * FROM requests"
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY id DESC"
+
+        rows = connection.execute(query, parameters).fetchall()
         return [dict(row) for row in rows]
     finally:
         connection.close()
