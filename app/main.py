@@ -1,6 +1,6 @@
+from typing import Literal
 
-
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .database import connect_db, initialize_database
@@ -18,6 +18,10 @@ class RequestCreate(BaseModel):
     priority: str = "보통"
 
 
+class RequestStatusUpdate(BaseModel):
+    status: Literal["접수", "처리 중", "완료"]
+
+
 @app.get("/")
 def home():
     return {"message": "IT 요청·장애 관리 도구 API"}
@@ -31,7 +35,6 @@ def get_requests():
         rows = connection.execute(
             "SELECT * FROM requests ORDER BY id DESC"
         ).fetchall()
-
         return [dict(row) for row in rows]
     finally:
         connection.close()
@@ -47,12 +50,7 @@ def create_request(request: RequestCreate):
             INSERT INTO requests (title, category, description, priority)
             VALUES (?, ?, ?, ?)
             """,
-            (
-                request.title,
-                request.category,
-                request.description,
-                request.priority,
-            ),
+            (request.title, request.category, request.description, request.priority),
         )
         connection.commit()
 
@@ -60,7 +58,37 @@ def create_request(request: RequestCreate):
             "SELECT * FROM requests WHERE id = ?",
             (cursor.lastrowid,),
         ).fetchone()
-
         return dict(row)
+    finally:
+        connection.close()
+
+
+@app.patch("/requests/{request_id}/status")
+def update_request_status(request_id: int, request: RequestStatusUpdate):
+    connection = connect_db()
+
+    try:
+        existing = connection.execute(
+            "SELECT * FROM requests WHERE id = ?",
+            (request_id,),
+        ).fetchone()
+
+        if existing is None:
+            raise HTTPException(
+                status_code=404,
+                detail="해당 요청을 찾을 수 없습니다.",
+            )
+
+        connection.execute(
+            "UPDATE requests SET status = ? WHERE id = ?",
+            (request.status, request_id),
+        )
+        connection.commit()
+
+        updated = connection.execute(
+            "SELECT * FROM requests WHERE id = ?",
+            (request_id,),
+        ).fetchone()
+        return dict(updated)
     finally:
         connection.close()
