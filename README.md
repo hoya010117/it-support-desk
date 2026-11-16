@@ -1,24 +1,31 @@
-# it-support-desk
 # IT 요청·장애 관리 도구
 
-## 프로젝트 소개
-직원의 IT 요청을 등록하고 처리 상태와 현황을 관리하는 웹 도구입니다.
+IT 요청을 등록하고 처리 상태를 관리하며, 요청 데이터를 CSV로 가져오고 내보내는 포트폴리오 프로젝트입니다.
 
-## 해결하려는 문제
-IT 요청이 여러 채널에 흩어지면 처리 상황과 미처리 건수를 파악하기 어렵습니다.
+## 주요 기능
 
-## 첫 버전 기능
-- [ ] IT 요청 등록
-- [ ] 요청 목록 조회
-- [ ] 처리 상태 변경
-- [ ] 상태별 요청 건수 확인
-- [ ] CSV 파일로 내보내기
+- IT 요청 등록 및 목록 조회
+- 요청 상태 변경: 접수, 처리 중, 완료
+- 상태별 요청 건수를 보여주는 대시보드
+- CSV 파일로 요청 여러 건 일괄 등록
+- CSV 데이터의 필수 항목과 우선순위 검증
+- Excel에서 한글이 깨지지 않도록 CSV 내보내기 처리
 
-## 사용 기술
-- Python
-- FastAPI
+## 기술 스택
+
+- Python, FastAPI
 - SQLite
-- HTML / JavaScript
+- HTML, CSS, JavaScript
+- Git, GitHub
 
-## 진행 상황
-프로젝트 기획 단계
+## 실행 방법
+
+```bash
+git clone https://github.com/hoya010117/it-support-desk.git
+cd it-support-desk
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+
+uvicorn app.main:app --reload
