@@ -36,6 +36,11 @@
     .card { padding: 18px; }
     .card span { color: #627d98; font-size: 13px; }
     .card strong { display: block; margin-top: 8px; font-size: 28px; }
+    .analytics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+    .metric-row { margin-bottom: 14px; font-size: 13px; }
+    .metric-label { display: flex; justify-content: space-between; margin-bottom: 6px; color: #486581; }
+    .bar-track { height: 7px; border-radius: 99px; background: #e6edf5; }
+    .bar-fill { height: 100%; border-radius: 99px; background: #20a486; }
     .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
     .panel { padding: 20px; }
     h2 { margin: 0 0 16px; font-size: 18px; }
@@ -82,6 +87,12 @@
       <div class="card"><span>접수</span><strong id="receivedCount">0</strong></div>
       <div class="card"><span>처리 중</span><strong id="workingCount">0</strong></div>
       <div class="card"><span>완료</span><strong id="doneCount">0</strong></div>
+    </section>
+
+    <section class="analytics-grid">
+      <div class="panel"><h2>유형별 요청</h2><div id="categoryStats"></div></div>
+      <div class="panel"><h2>우선순위별 요청</h2><div id="priorityStats"></div></div>
+      <div class="panel"><h2>월별 요청</h2><div id="monthStats"></div></div>
     </section>
 
     <div class="layout">
@@ -144,6 +155,49 @@
       })[char]);
     }
 
+    function renderMetricList(containerId, entries) {
+      const container = document.querySelector(`#${containerId}`);
+
+      if (!entries.length) {
+        container.innerHTML = '<div class="empty">집계할 요청이 없습니다.</div>';
+        return;
+      }
+
+      const maxCount = Math.max(...entries.map((entry) => entry.count), 1);
+      container.innerHTML = entries.map((entry) => {
+        const width = Math.round((entry.count / maxCount) * 100);
+        return `
+          <div class="metric-row">
+            <div class="metric-label">
+              <span>${escapeHTML(entry.label)}</span>
+              <strong>${entry.count}건</strong>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function loadStats() {
+      const response = await fetch("/requests/stats");
+      const stats = await response.json();
+
+      renderMetricList(
+        "categoryStats",
+        Object.entries(stats.by_category).map(([label, count]) => ({ label, count }))
+      );
+      renderMetricList(
+        "priorityStats",
+        Object.entries(stats.by_priority).map(([label, count]) => ({ label, count }))
+      );
+      renderMetricList(
+        "monthStats",
+        stats.by_month.map((item) => ({ label: item.month, count: item.count }))
+      );
+    }
+
     async function loadRequests() {
       const response = await fetch("/requests");
       const requests = await response.json();
@@ -195,7 +249,7 @@
 
       event.currentTarget.reset();
       notice.textContent = "요청이 등록됐습니다.";
-      await loadRequests();
+      await loadRequests();\n      await loadStats();
     });
 
     rows.addEventListener("click", async (event) => {
@@ -211,7 +265,7 @@
       });
 
       notice.textContent = response.ok ? "상태를 변경했습니다." : "상태 변경에 실패했습니다.";
-      if (response.ok) await loadRequests();
+      if (response.ok) await loadRequests();\n      await loadStats();
     });
 
     const csvFile = document.querySelector("#csvFile");
@@ -240,7 +294,7 @@
         }
 
         notice.textContent = `${result.imported_count}건의 요청을 등록했습니다.`;
-        await loadRequests();
+        await loadRequests();\n      await loadStats();
       } catch {
         notice.textContent = "서버에 연결할 수 없습니다.";
       } finally {
