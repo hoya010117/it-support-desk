@@ -66,7 +66,23 @@
       .stats { grid-template-columns: repeat(2, 1fr); }
       header { padding: 20px; }
     }
-  </style>
+  
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0;
+    }
+    .filter-bar input,
+    .filter-bar select {
+      min-width: 150px;
+      padding: 9px 10px;
+      border: 1px solid #d5d9e2;
+      border-radius: 8px;
+      font: inherit;
+    }
+
+</style>
 </head>
 <body>
   <header>
@@ -131,6 +147,18 @@
           <h2>요청 목록</h2>
           <span id="listCount">0건</span>
         </div>
+        <form class="filter-bar" id="filterForm">
+          <input id="searchInput" type="search" placeholder="제목·유형·내용 검색">
+          <select id="statusFilter">
+            <option value="">전체 상태</option>
+            <option value="접수">접수</option>
+            <option value="처리 중">처리 중</option>
+            <option value="완료">완료</option>
+          </select>
+          <input id="categoryFilter" type="text" placeholder="유형명으로 필터">
+          <button class="button" type="submit">검색</button>
+          <button class="button" id="resetFilters" type="button">초기화</button>
+        </form>
         <div class="table-wrap">
           <table>
             <thead>
@@ -199,7 +227,16 @@
     }
 
     async function loadRequests() {
-      const response = await fetch("/requests");
+      const params = new URLSearchParams();
+      const q = document.querySelector("#searchInput").value.trim();
+      const status = document.querySelector("#statusFilter").value;
+      const category = document.querySelector("#categoryFilter").value.trim();
+
+      if (q) params.set("q", q);
+      if (status) params.set("status", status);
+      if (category) params.set("category", category);
+
+      const response = await fetch(`/requests?${params.toString()}`);
       const requests = await response.json();
 
       document.querySelector("#totalCount").textContent = requests.length;
@@ -231,6 +268,18 @@
       `).join("");
     }
 
+    document.querySelector("#filterForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      loadRequests();
+    });
+
+    document.querySelector("#resetFilters").addEventListener("click", () => {
+      document.querySelector("#searchInput").value = "";
+      document.querySelector("#statusFilter").value = "";
+      document.querySelector("#categoryFilter").value = "";
+      loadRequests();
+    });
+
     document.querySelector("#requestForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
@@ -249,7 +298,8 @@
 
       event.currentTarget.reset();
       notice.textContent = "요청이 등록됐습니다.";
-      await loadRequests();\n      await loadStats();
+      await loadRequests();
+      await loadStats();
     });
 
     rows.addEventListener("click", async (event) => {
@@ -265,7 +315,8 @@
       });
 
       notice.textContent = response.ok ? "상태를 변경했습니다." : "상태 변경에 실패했습니다.";
-      if (response.ok) await loadRequests();\n      await loadStats();
+      if (response.ok) await loadRequests();
+      await loadStats();
     });
 
     const csvFile = document.querySelector("#csvFile");
@@ -294,7 +345,8 @@
         }
 
         notice.textContent = `${result.imported_count}건의 요청을 등록했습니다.`;
-        await loadRequests();\n      await loadStats();
+        await loadRequests();
+      await loadStats();
       } catch {
         notice.textContent = "서버에 연결할 수 없습니다.";
       } finally {
@@ -303,6 +355,7 @@
     });
 
     loadRequests();
+    loadStats();
   </script>
 </body>
 </html>
