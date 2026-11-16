@@ -29,3 +29,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 
 uvicorn app.main:app --reload
+
+## 대시보드 화면
+
+![IT 요청·장애 관리 대시보드](docs/images/dashboard.png)
