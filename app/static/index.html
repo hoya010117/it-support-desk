@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IT 요청·장애 관리</title>
+  <style>
+    :root {
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      color: #172b4d;
+      background: #f4f7fb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 24px max(24px, calc((100% - 1180px) / 2));
+      background: #102a43; color: white;
+    }
+    h1 { margin: 4px 0 0; font-size: 25px; }
+    .eyebrow { margin: 0; color: #9fb3c8; font-size: 12px; letter-spacing: 1px; }
+    .button {
+      border: 0; border-radius: 8px; padding: 11px 16px;
+      background: #20a486; color: white; font-weight: 700;
+      text-decoration: none; cursor: pointer;
+    }
+    main { max-width: 1180px; margin: 28px auto; padding: 0 20px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .card, .panel {
+      background: white; border: 1px solid #e3eaf2; border-radius: 12px;
+      box-shadow: 0 3px 12px #102a430b;
+    }
+    .card { padding: 18px; }
+    .card span { color: #627d98; font-size: 13px; }
+    .card strong { display: block; margin-top: 8px; font-size: 28px; }
+    .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+    .panel { padding: 20px; }
+    h2 { margin: 0 0 16px; font-size: 18px; }
+    label { display: block; margin: 14px 0 6px; color: #486581; font-size: 13px; }
+    input, select, textarea {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 7px;
+      padding: 10px; font: inherit; background: white;
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    form .button { width: 100%; margin-top: 16px; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .toolbar h2 { margin: 0; }
+    .table-wrap { overflow-x: auto; margin-top: 16px; }
+    table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid #e6edf5; text-align: left; font-size: 13px; }
+    th { color: #627d98; font-weight: 600; }
+    td .small-select { min-width: 105px; padding: 7px; }
+    .save { border: 0; border-radius: 6px; padding: 7px 10px; background: #e6f6f2; color: #087f68; cursor: pointer; }
+    .empty { padding: 30px; color: #829ab1; text-align: center; }
+    #notice { min-height: 20px; margin-top: 10px; color: #087f68; font-size: 13px; }
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      header { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">INTERNAL IT SERVICE</p>
+      <h1>요청·장애 관리</h1>
+    </div>
+    <a class="button" href="/requests/export.csv">CSV 다운로드</a>
+  </header>
+
+  <main>
+    <section class="stats">
+      <div class="card"><span>전체 요청</span><strong id="totalCount">0</strong></div>
+      <div class="card"><span>접수</span><strong id="receivedCount">0</strong></div>
+      <div class="card"><span>처리 중</span><strong id="workingCount">0</strong></div>
+      <div class="card"><span>완료</span><strong id="doneCount">0</strong></div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>새 요청 등록</h2>
+        <form id="requestForm">
+          <label for="title">요청 제목</label>
+          <input id="title" name="title" required maxlength="120" placeholder="예: 사내 와이파이 연결 오류">
+
+          <label for="category">유형</label>
+          <select id="category" name="category">
+            <option>네트워크</option>
+            <option>계정</option>
+            <option>PC·장비</option>
+            <option>업무시스템</option>
+            <option>기타</option>
+          </select>
+
+          <label for="description">상세 내용</label>
+          <textarea id="description" name="description" required placeholder="문제 상황을 적어주세요."></textarea>
+
+          <label for="priority">우선순위</label>
+          <select id="priority" name="priority">
+            <option>보통</option>
+            <option>높음</option>
+            <option>낮음</option>
+          </select>
+
+          <button class="button" type="submit">요청 등록</button>
+          <div id="notice" role="status"></div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="toolbar">
+          <h2>요청 목록</h2>
+          <span id="listCount">0건</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>요청</th><th>유형</th><th>우선순위</th><th>상태</th><th>등록일</th><th></th></tr>
+            </thead>
+            <tbody id="requestRows"></tbody>
+          </table>
+          <div class="empty" id="emptyMessage">등록된 요청이 없습니다.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const rows = document.querySelector("#requestRows");
+    const notice = document.querySelector("#notice");
+    const statuses = ["접수", "처리 중", "완료"];
+
+    function escapeHTML(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+
+    async function loadRequests() {
+      const response = await fetch("/requests");
+      const requests = await response.json();
+
+      document.querySelector("#totalCount").textContent = requests.length;
+      document.querySelector("#receivedCount").textContent =
+        requests.filter((item) => item.status === "접수").length;
+      document.querySelector("#workingCount").textContent =
+        requests.filter((item) => item.status === "처리 중").length;
+      document.querySelector("#doneCount").textContent =
+        requests.filter((item) => item.status === "완료").length;
+      document.querySelector("#listCount").textContent = `${requests.length}건`;
+      document.querySelector("#emptyMessage").hidden = requests.length > 0;
+
+      rows.innerHTML = requests.map((item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${escapeHTML(item.title)}</td>
+          <td>${escapeHTML(item.category)}</td>
+          <td>${escapeHTML(item.priority)}</td>
+          <td>
+            <select class="small-select" aria-label="요청 ${item.id} 상태">
+              ${statuses.map((status) =>
+                `<option ${status === item.status ? "selected" : ""}>${status}</option>`
+              ).join("")}
+            </select>
+          </td>
+          <td>${escapeHTML(item.created_at)}</td>
+          <td><button class="save" data-id="${item.id}">저장</button></td>
+        </tr>
+      `).join("");
+    }
+
+    document.querySelector("#requestForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      const payload = Object.fromEntries(form.entries());
+
+      const response = await fetch("/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        notice.textContent = "등록에 실패했습니다. 입력 내용을 확인해 주세요.";
+        return;
+      }
+
+      event.currentTarget.reset();
+      notice.textContent = "요청이 등록됐습니다.";
+      await loadRequests();
+    });
+
+    rows.addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-id]");
+      if (!button) return;
+
+      const row = button.closest("tr");
+      const status = row.querySelector("select").value;
+      const response = await fetch(`/requests/${button.dataset.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+
+      notice.textContent = response.ok ? "상태를 변경했습니다." : "상태 변경에 실패했습니다.";
+      if (response.ok) await loadRequests();
+    });
+
+    loadRequests();
+  </script>
+</body>
+</html>
