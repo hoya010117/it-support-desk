@@ -6,7 +6,7 @@ IT 요청을 등록하고 처리 상태를 관리하며, CSV로 요청 데이터
 
 - IT 요청 등록 및 목록 조회
 - 요청 상태 변경: 접수, 처리 중, 완료
-- 상태별 요청 건수를 보여주는 대시보드
+- 상태별·유형별·우선순위별·월별 요청 건수를 분석하는 대시보드
 - CSV 파일로 여러 요청 일괄 등록
 - 필수 항목과 우선순위 검증 및 오류 안내
 - Excel에서 한글이 깨지지 않도록 CSV 내보내기
@@ -49,6 +49,7 @@ CSV에는 `title`, `category`, `description` 열이 필요합니다. `priority`�
 | Method | 경로 | 설명 |
 |---|---|---|
 | GET | `/requests` | 요청 목록 조회 |
+| GET | `/requests/stats` | 요청 현황 집계 |
 | POST | `/requests` | 요청 등록 |
 | PATCH | `/requests/{request_id}/status` | 요청 상태 변경 |
 | GET | `/requests/export.csv` | 요청 목록 CSV 다운로드 |
