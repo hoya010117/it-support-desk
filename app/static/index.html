@@ -24,6 +24,9 @@
       background: #20a486; color: white; font-weight: 700;
       text-decoration: none; cursor: pointer;
     }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .header-actions label { display: inline-block; margin: 0; }
+    .import-button { font-size: 14px; }
     main { max-width: 1180px; margin: 28px auto; padding: 0 20px; }
     .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
     .card, .panel {
@@ -66,7 +69,11 @@
       <p class="eyebrow">INTERNAL IT SERVICE</p>
       <h1>요청·장애 관리</h1>
     </div>
-    <a class="button" href="/requests/export.csv">CSV 다운로드</a>
+    <div class="header-actions">
+      <a class="button" href="/requests/export.csv">CSV 다운로드</a>
+      <label class="button import-button" for="csvFile">CSV 업로드</label>
+      <input id="csvFile" type="file" accept=".csv,text/csv" hidden>
+    </div>
   </header>
 
   <main>
@@ -205,6 +212,40 @@
 
       notice.textContent = response.ok ? "상태를 변경했습니다." : "상태 변경에 실패했습니다.";
       if (response.ok) await loadRequests();
+    });
+
+    const csvFile = document.querySelector("#csvFile");
+
+    csvFile.addEventListener("change", async () => {
+      const file = csvFile.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+      notice.textContent = `${file.name} 업로드 중...`;
+
+      try {
+        const response = await fetch("/requests/import.csv", {
+          method: "POST",
+          body: formData
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          const detail = result.detail;
+          notice.textContent = typeof detail === "string"
+            ? detail
+            : detail?.errors?.join(" / ") || detail?.message || "업로드에 실패했습니다.";
+          return;
+        }
+
+        notice.textContent = `${result.imported_count}건의 요청을 등록했습니다.`;
+        await loadRequests();
+      } catch {
+        notice.textContent = "서버에 연결할 수 없습니다.";
+      } finally {
+        csvFile.value = "";
+      }
     });
 
     loadRequests();
