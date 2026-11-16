@@ -1,3 +1,4 @@
+from .csv_export import router as csv_router
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
@@ -7,6 +8,7 @@ from .database import connect_db, initialize_database
 
 
 app = FastAPI(title="IT 요청·장애 관리 도구")
+app.include_router(csv_router)
 
 initialize_database()
 
